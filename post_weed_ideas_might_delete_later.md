@@ -118,6 +118,40 @@ Given your SOSALot architecture, would you be interested in refactoring to separ
 
 # Greg notes..
 
+## Diagnostic Recipes as MCP Resources
+
+**The Idea**: MCP server contains diagnostic "recipes" for common system problems. When user says "networking is slow", LLM gets structured investigation workflow.
+
+**MCP-Aligned Implementation** (recipes as resources, not tools):
+```
+sos://recipes                    # Index of available recipes  
+sos://recipe/network-performance # Network diagnostic workflow
+sos://recipe/storage-issues      # Disk/filesystem problems
+sos://recipe/memory-leaks        # Memory investigation steps
+```
+
+**Example Recipe Resource:**
+```yaml
+name: "Network Performance Investigation"
+triggers: ["slow network", "connectivity problems"] 
+steps:
+  - check_interface_errors:
+      files: ["/proc/net/dev", "/var/log/messages"]
+      look_for: ["CRC errors", "dropped packets"]
+  
+  - analyze_dns_config:
+      files: ["/etc/resolv.conf"] 
+      flags: ["mixed network ranges", "unreachable nameservers"]
+```
+
+**Benefits:**
+- **Domain expertise codified** in server resources
+- **LLM orchestrates** using existing atomic tools  
+- **Consistent diagnostics** - same investigation steps each time
+- **Extensible** - add recipes for different problem domains
+
+Maintains MCP principle: Server provides knowledge (recipes), LLM provides orchestration (execution).
+
 ## Problem with abstracting prompts from code.
 
 The problem with abstracting the prompt layer is that you then have two sources of behavioural 'truth'..
