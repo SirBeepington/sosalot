@@ -5,8 +5,14 @@ SosAlot - SOS Report Analysis MCP Server
 A Model Context Protocol server for analyzing Linux SOS reports.
 
 Usage:
-    python sosalot_server.py
+    python sosalot_server.py [-t strm|stdio] [--transport strm|stdio]
+    
+Transport options:
+    strm    - Use streamable HTTP (default)
+    stdio   - Use stdio transport
 """
+
+import argparse
 
 # TODO: Future Tools to Add
 
@@ -142,6 +148,34 @@ Example report_id: "centos9-original_20251209_1430"
 """
 
 
-# Run with streamable HTTP transport
+# Run with configurable transport
 if __name__ == "__main__":
-    sosalot.run(transport="streamable-http")
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description="SosAlot - SOS Report Analysis MCP Server",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "-t", "--transport", 
+        choices=["strm", "stdio"],
+        default="strm",
+        help="Transport method: 'strm' for streamable HTTP (default), 'stdio' for stdio transport"
+    )
+    
+    args = parser.parse_args()
+    
+    # Map transport argument to actual transport string
+    transport_map = {
+        "strm": "streamable-http",
+        "stdio": "stdio"
+    }
+    
+    transport = transport_map[args.transport]
+    print(f"🚀 Starting SosAlot MCP server with '{transport}' transport")
+    
+    if transport == "stdio":
+        print("📡 Server will communicate via stdin/stdout (no HTTP server)")
+    else:
+        print("🌐 Server will start HTTP server on http://127.0.0.1:8000")
+    
+    sosalot.run(transport=transport)

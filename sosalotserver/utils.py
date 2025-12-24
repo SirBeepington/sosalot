@@ -10,8 +10,9 @@ import json
 import time
 from typing import Dict, List, Optional, Any
 
-# Configuration
-SOS_REPORTS_DIR = "./sos_reports"
+# Configuration - Use absolute path based on script location
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SOS_REPORTS_DIR = os.path.join(SCRIPT_DIR, "sos_reports")
 
 # Data size limits for LLM efficiency
 MAX_TEXT_SIZE = 10000      # Max characters for text content (logs, files)

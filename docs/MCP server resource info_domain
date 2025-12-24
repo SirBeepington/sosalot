@@ -1,0 +1,270 @@
+# MCP Resource Specification  
+## `info_domain/<domain_name>`
+
+---
+
+## Purpose
+
+This resource exposes **report-specific, domain-scoped file discovery** to MCP clients, based on a **static, declarative server configuration**.
+
+It answers one question only:
+
+> *For this SOS report, which files are relevant to this information domain?*
+
+This resource **does not**:
+- parse file contents
+- summarise data
+- infer meaning
+- guarantee completeness
+
+---
+
+## Resource Characteristics
+
+- **Type**: Resource (not a tool)
+- **Mutability**: Dynamic per report
+- **Side effects**: None
+- **Idempotent**: Yes
+- **Cost**: Low (filesystem checks + glob expansion)
+
+---
+
+## Resource Naming
+
+Pattern:
+
+```
+info_domain/<domain_name>
+```
+
+Examples:
+- `info_domain/network_interfaces`
+- `info_domain/routing`
+- `info_domain/kernel`
+- `info_domain/hardware`
+
+`<domain_name>` **must correspond** to a domain defined in the MCP server configuration.
+
+---
+
+## Resource Inputs
+
+| Field  | Type   | Required | Description |
+|------|--------|----------|-------------|
+| `report` | string | Yes | SOS report identifier |
+
+No other inputs are accepted.
+
+---
+
+## Resource Output Schema
+
+```json
+{
+  "domain": "network_interfaces",
+  "description": "Network interface addresses and link-level information",
+  "report": "centos9-original_20251209_2142",
+  "sources": [
+    {
+      "path": "sos_commands/networking/ip_-o_addr",
+      "source_type": "file",
+      "confidence": "high",
+      "notes": "Primary source of IPv4 and IPv6 interface addresses"
+    },
+    {
+      "path": "sos_commands/networking/ip_addr",
+      "source_type": "symlink",
+      "confidence": "medium",
+      "notes": "Alternate ip addr output, may point to preferred source"
+    }
+  ],
+  "missing_sources": [
+    {
+      "pattern": "sos_commands/networking/ifconfig*",
+      "confidence": "low",
+      "notes": "Legacy net-tools output, often absent on modern systems"
+    }
+  ]
+}
+```
+
+---
+
+## Output Semantics
+
+### `sources`
+- Contains **only paths that exist** in the specified report
+- Ordered by preference (as defined in configuration)
+- No guarantee of completeness or uniqueness
+
+### `missing_sources`
+- Lists configured paths or globs that did **not** match
+- Included to make absence explicit and meaningful
+
+If no sources exist, `sources` is an empty array.  
+This is **not an error**.
+
+---
+
+## Error Conditions
+
+| Condition | Behaviour |
+|---------|-----------|
+| Unknown domain | Resource not found |
+| Unknown report | Resource error |
+| Filesystem error | Resource error |
+
+Partial results are not returned.
+
+---
+
+# MCP Server Configuration  
+## Info Domains
+
+---
+
+## Purpose
+
+This configuration defines:
+- information domains
+- ranked evidence sources per domain
+- human- and LLM-readable intent
+
+It is:
+- static
+- version-controlled
+- authoritative
+
+The MCP server:
+- loads it at startup
+- does not mutate it
+- does not interpret beyond glob expansion and existence checks
+
+---
+
+## Configuration Structure
+
+```json
+{
+  "info_domains": {
+    "<domain_name>": {
+      "description": "...",
+      "sources": [
+        { /* source definition */ }
+      ]
+    }
+  }
+}
+```
+
+---
+
+## Domain Definition
+
+### Fields
+
+| Field | Type | Required | Description |
+|------|------|----------|-------------|
+| `description` | string | Yes | Short, declarative description |
+| `sources` | array | Yes | Ordered list of evidence sources |
+
+---
+
+## Source Definition
+
+Each source entry must contain **exactly one** of `path` or `glob`.
+
+### Path Source
+
+```json
+{
+  "path": "sos_commands/networking/ip_-o_addr",
+  "confidence": "high",
+  "notes": "Primary source of interface addresses"
+}
+```
+
+### Glob Source
+
+```json
+{
+  "glob": "sos_commands/networking/ifconfig*",
+  "confidence": "low",
+  "notes": "Legacy net-tools output, may be absent"
+}
+```
+
+---
+
+## Source Rules
+
+- Exactly one of `path` or `glob` is required
+- Recursive globs (`**`) are not permitted
+- Globs are expanded **within the report root only**
+- Source order defines preference
+- Confidence is informational only
+
+---
+
+## Allowed Confidence Values
+
+```
+high
+medium
+low
+```
+
+No numeric scoring or weighting logic is applied.
+
+---
+
+## Example Configuration
+
+```json
+{
+  "info_domains": {
+    "network_interfaces": {
+      "description": "Network interface addresses and link-level state",
+      "sources": [
+        {
+          "path": "sos_commands/networking/ip_-o_addr",
+          "confidence": "high",
+          "notes": "Primary source of IPv4 and IPv6 addresses"
+        },
+        {
+          "path": "sos_commands/networking/ip_addr",
+          "confidence": "medium",
+          "notes": "Alternate ip addr output or symlink"
+        },
+        {
+          "glob": "sos_commands/networking/ifconfig*",
+          "confidence": "low",
+          "notes": "Legacy net-tools output"
+        }
+      ]
+    }
+  }
+}
+```
+
+---
+
+## Explicit Non-Goals
+
+This configuration must **not** include:
+- parsing instructions
+- regular expressions
+- distro or version conditionals
+- semantic extraction hints
+- execution logic
+
+If such behaviour is required, it belongs in a **tool**, not a resource.
+
+---
+
+## Contract Summary
+
+- Configuration defines **intent and preference**
+- Resource reports **actual files for a specific report**
+- Interpretation is performed by the MCP client (LLM)
+- The MCP server remains simple, deterministic, and stable
