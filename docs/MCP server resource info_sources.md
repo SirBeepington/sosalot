@@ -1,21 +1,53 @@
 # MCP Resource Specification  
-## `info_domain/<domain_name>`
+## `info_sources/<domain_name>`
+
+---
+
+## Background
+
+This resource represents a **configuration-driven architecture** choice for SOS report analysis.
+
+### Design Philosophy
+
+Rather than building dozens of specialized tools (`get_network_interfaces()`, `get_hardware_info()`, etc.), this approach leverages:
+
+- **Generic file tools**: `read_file()`, `search_file()`, `list_dir()` - bulletproof and version-agnostic
+- **Smart signposting**: Resources guide clients to the right data sources  
+- **Configuration intelligence**: Domain knowledge lives in declarative config, not code
+- **AI interpretation**: LLMs handle content analysis using simple, reliable file operations
+
+### Strategic Benefits
+
+**Maintainability**: When SOS report formats change or new domains emerge, update configuration files instead of rebuilding tools.
+
+**Extensibility**: New information domains require no code changes - just config updates.
+
+**Reliability**: Generic file operations are immune to SOS report version variations.
+
+**Efficiency**: Clients get targeted guidance without sacrificing the flexibility of generic tools.
+
+### Core Insight
+
+**Intelligence belongs in configuration, not code.** The MCP server provides smart signposting; the client (LLM) handles interpretation using proven file manipulation primitives.
 
 ---
 
 ## Purpose
 
-This resource exposes **report-specific, domain-scoped file discovery** to MCP clients, based on a **static, declarative server configuration**.
+This resource exposes **report-specific, domain-scoped information sources** to MCP clients, based on a **static, declarative server configuration**.
 
 It answers one question only:
 
-> *For this SOS report, which files are relevant to this information domain?*
+> *For this SOS report, which sources should be consulted for this category of information?*
+
+At present, these sources are filesystem objects (files, symlinks, directories), but the abstraction is intentionally broader.
 
 This resource **does not**:
 - parse file contents
 - summarise data
 - infer meaning
 - guarantee completeness
+- assert correctness of the information contained
 
 ---
 
@@ -25,7 +57,7 @@ This resource **does not**:
 - **Mutability**: Dynamic per report
 - **Side effects**: None
 - **Idempotent**: Yes
-- **Cost**: Low (filesystem checks + glob expansion)
+- **Cost**: Low (filesystem existence checks + glob expansion)
 
 ---
 
@@ -34,16 +66,18 @@ This resource **does not**:
 Pattern:
 
 ```
-info_domain/<domain_name>
+info_sources/<domain_name>
 ```
 
 Examples:
-- `info_domain/network_interfaces`
-- `info_domain/routing`
-- `info_domain/kernel`
-- `info_domain/hardware`
+- `info_sources/network_interfaces`
+- `info_sources/routing`
+- `info_sources/kernel`
+- `info_sources/hardware`
 
 `<domain_name>` **must correspond** to a domain defined in the MCP server configuration.
+
+The name intentionally emphasises *sources*, not answers or facts.
 
 ---
 
@@ -93,16 +127,18 @@ No other inputs are accepted.
 ## Output Semantics
 
 ### `sources`
-- Contains **only paths that exist** in the specified report
+- Contains **only sources that exist** in the specified report
 - Ordered by preference (as defined in configuration)
+- Sources may be files, directories, or symlinks
 - No guarantee of completeness or uniqueness
 
 ### `missing_sources`
 - Lists configured paths or globs that did **not** match
 - Included to make absence explicit and meaningful
+- Absence is informational, not an error
 
 If no sources exist, `sources` is an empty array.  
-This is **not an error**.
+This is **not an error condition**.
 
 ---
 
@@ -119,7 +155,7 @@ Partial results are not returned.
 ---
 
 # MCP Server Configuration  
-## Info Domains
+## Info Sources Configuration
 
 ---
 
@@ -127,8 +163,8 @@ Partial results are not returned.
 
 This configuration defines:
 - information domains
-- ranked evidence sources per domain
-- human- and LLM-readable intent
+- ranked information sources per domain
+- human- and LLM-readable intent and caveats
 
 It is:
 - static
@@ -146,7 +182,7 @@ The MCP server:
 
 ```json
 {
-  "info_domains": {
+  "info_sources": {
     "<domain_name>": {
       "description": "...",
       "sources": [
@@ -161,12 +197,14 @@ The MCP server:
 
 ## Domain Definition
 
+Each top-level entry represents an **information domain**.
+
 ### Fields
 
 | Field | Type | Required | Description |
 |------|------|----------|-------------|
-| `description` | string | Yes | Short, declarative description |
-| `sources` | array | Yes | Ordered list of evidence sources |
+| `description` | string | Yes | Short, declarative description of the domain |
+| `sources` | array | Yes | Ordered list of candidate information sources |
 
 ---
 
@@ -202,7 +240,7 @@ Each source entry must contain **exactly one** of `path` or `glob`.
 - Recursive globs (`**`) are not permitted
 - Globs are expanded **within the report root only**
 - Source order defines preference
-- Confidence is informational only
+- Confidence is informational only and does not affect behaviour
 
 ---
 
@@ -222,7 +260,7 @@ No numeric scoring or weighting logic is applied.
 
 ```json
 {
-  "info_domains": {
+  "info_sources": {
     "network_interfaces": {
       "description": "Network interface addresses and link-level state",
       "sources": [
@@ -265,6 +303,6 @@ If such behaviour is required, it belongs in a **tool**, not a resource.
 ## Contract Summary
 
 - Configuration defines **intent and preference**
-- Resource reports **actual files for a specific report**
-- Interpretation is performed by the MCP client (LLM)
+- `info_sources/<domain>` reports **actual sources present for a specific report**
+- Interpretation and synthesis are performed by the MCP client (LLM)
 - The MCP server remains simple, deterministic, and stable
