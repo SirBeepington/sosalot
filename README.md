@@ -2,6 +2,31 @@
 
 **SOSALot** (SOS A Lot) is a Model Context Protocol (MCP) server that provides LLM-friendly APIs for analyzing Linux SOS reports. 
 
+### Design Philosophy
+
+SOS report outputs vary between target systems, distros and sos report versions. 
+
+A comprehensive MCP tool-set to pull data from an sos report (e.g., `get_network_interfaces`, `get_hardware_info` etc.) is likely to be very complex and brittle.
+
+Instead we lean on the file-based nature of sos reports and dynamically create a map of info domain to useful files.
+
+The mappings are set up entirely in sosalot server's config, then dynamically constrained by what files really exist in a given sos report.
+
+Exceptions will be made when necessary including:
+ - sos report discovery tools
+ - file find, search and read tools
+ - maybe a system journal parser/search tool
+
+#### Benefits
+ - **Maintainability**: Update configuration files instead of code to amend and extend functionality
+ - **Reliability**: Generic file operations are immune to SOS report version variations
+ - **Flexibility**: All the data in any given sos report can be made available
+
+#### Drawbacks
+ - **File names and directory structure**: Very linux-like, demands good linux knowledge from client
+ - **No data abstraction**: Difficulty diffing sos reports that don't have matching files 
+
+
 ## Project Structure
 
 This is a **monorepo** with two independent packages:
@@ -172,7 +197,7 @@ system_info = client.call_tool("get_system_info", {"report_id": "centos9-origina
 ## Links
 
 - **GitHub Repository**: https://github.com/SirBeepington/sosalot
-- **MCP Documentation**: https://modelcontextprotocol.io/
+- **MCP Documentation**: g
 - **SOS Report Documentation**: https://github.com/sosreport/sos
 
 ---

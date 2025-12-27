@@ -1,0 +1,69 @@
+{
+  "info_sources": {
+    "network_interfaces": {
+      "description": "Network interface addresses and link-level state",
+      "sources": [
+        {
+          "path": "sos_commands/networking/ip_-o_addr",
+          "confidence": "high",
+          "notes": "Primary source of IPv4 and IPv6 interface addresses"
+        },
+        {
+          "path": "ip_addr",
+          "confidence": "medium", 
+          "notes": "Alternate ip addr output or symlink to preferred source"
+        },
+        {
+          "glob": "sos_commands/networking/ifconfig*",
+          "confidence": "low",
+          "notes": "Legacy net-tools output, often absent on modern systems"
+        }
+      ]
+    },
+    "routing": {
+      "description": "Network routing tables and rules",
+      "sources": [
+        {
+          "path": "sos_commands/networking/ip_route_show_table_all",
+          "confidence": "high",
+          "notes": "Complete routing table information"
+        },
+        {
+          "path": "sos_commands/networking/ip_-4_rule_list",
+          "confidence": "medium",
+          "notes": "IPv4 routing rules"
+        },
+        {
+          "path": "sos_commands/networking/ip_-6_rule_list", 
+          "confidence": "medium",
+          "notes": "IPv6 routing rules"
+        },
+        {
+          "glob": "sos_commands/networking/route*",
+          "confidence": "low",
+          "notes": "Legacy route command output"
+        }
+      ]
+    },
+    "hardware": {
+      "description": "System hardware information and device details",
+      "sources": [
+        {
+          "path": "dmidecode",
+          "confidence": "high",
+          "notes": "Comprehensive hardware information from BIOS/UEFI"
+        },
+        {
+          "path": "sos_commands/hardware/lspci_-nnvv",
+          "confidence": "high", 
+          "notes": "Detailed PCI device information"
+        },
+        {
+          "glob": "sos_commands/hardware/lscpu*",
+          "confidence": "medium",
+          "notes": "CPU architecture and feature information"
+        }
+      ]
+    }
+  }
+}

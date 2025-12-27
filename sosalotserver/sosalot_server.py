@@ -37,18 +37,29 @@ sosalot = FastMCP("SosAlot", json_response=True)
 
 # Import tools from modules
 from tools.report_discovery import query_sos_reports
-from tools.filesystem_tools import list_dir, search_for_files_and_directories, read_file, search_file
+from tools.filesystem_tools import list_dir, find_files_by_name, find_files_by_name_recursive, read_file, search_file
+from tools.info_sources_tool import get_info_sources_for_domain
 
 # Register all tools with the MCP server
 sosalot.tool()(query_sos_reports)
 sosalot.tool()(list_dir)
-sosalot.tool()(search_for_files_and_directories)
+sosalot.tool()(find_files_by_name)
+sosalot.tool()(find_files_by_name_recursive)
 sosalot.tool()(read_file)
 sosalot.tool()(search_file)
+sosalot.tool()(get_info_sources_for_domain)
 
 
 # =============================================================================
 # MCP RESOURCES - Help LLMs understand SOS report structure
+# =============================================================================
+
+# =============================================================================
+# MCP RESOURCES - Help LLMs understand SOS report structure
+# =============================================================================
+
+# =============================================================================
+# MCP RESOURCES - Static content for reference (not model-discoverable)
 # =============================================================================
 
 @sosalot.resource("sos://report-guide")

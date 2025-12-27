@@ -7,28 +7,21 @@
 
 This resource represents a **configuration-driven architecture** choice for SOS report analysis.
 
-### Design Philosophy
+### Design Philosophy:
 
-Rather than building dozens of specialized tools (`get_network_interfaces()`, `get_hardware_info()`, etc.), this approach leverages:
+SOS report outputs vary between target systems, distros/versions and sos report versions. A reasonably complete MCP tool-set to pull data from an sos report (`get_network_interfaces()`, `get_hardware_info()`, etc.) is likely to be very complex and brittle.
 
-- **Generic file tools**: `read_file()`, `search_file()`, `list_dir()` - bulletproof and version-agnostic
-- **Smart signposting**: Resources guide clients to the right data sources  
-- **Configuration intelligence**: Domain knowledge lives in declarative config, not code
-- **AI interpretation**: LLMs handle content analysis using simple, reliable file operations
+For these reasons we lean on the file based nature of sos reports by dynamically creating a map for the client to help it quickly find the data it wants in the sos report file structure.
 
-### Strategic Benefits
+Mapping behaviour will be dictated by MCP server config and will also be dynamically contrained by what files really exist in a given sos report.
 
-**Maintainability**: When SOS report formats change or new domains emerge, update configuration files instead of rebuilding tools.
+Exceptions will be made when necessary, for example a smart journal filtering tool. Base file tools plus sos report discovery tools are also required.
 
-**Extensibility**: New information domains require no code changes - just config updates.
+### Expected benefits
 
+**Maintainability**: Update configuration files instead of code to amend and extend functionality.
 **Reliability**: Generic file operations are immune to SOS report version variations.
-
-**Efficiency**: Clients get targeted guidance without sacrificing the flexibility of generic tools.
-
-### Core Insight
-
-**Intelligence belongs in configuration, not code.** The MCP server provides smart signposting; the client (LLM) handles interpretation using proven file manipulation primitives.
+**Flexibility**: All the data in any given sos report can be made available.
 
 ---
 
@@ -111,13 +104,6 @@ No other inputs are accepted.
       "confidence": "medium",
       "notes": "Alternate ip addr output, may point to preferred source"
     }
-  ],
-  "missing_sources": [
-    {
-      "pattern": "sos_commands/networking/ifconfig*",
-      "confidence": "low",
-      "notes": "Legacy net-tools output, often absent on modern systems"
-    }
   ]
 }
 ```
@@ -131,11 +117,6 @@ No other inputs are accepted.
 - Ordered by preference (as defined in configuration)
 - Sources may be files, directories, or symlinks
 - No guarantee of completeness or uniqueness
-
-### `missing_sources`
-- Lists configured paths or globs that did **not** match
-- Included to make absence explicit and meaningful
-- Absence is informational, not an error
 
 If no sources exist, `sources` is an empty array.  
 This is **not an error condition**.
