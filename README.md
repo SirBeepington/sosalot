@@ -1,21 +1,18 @@
 # SOSALot - SOS Report Analysis via MCP
 
-**SOSALot** (SOS A Lot) is a Model Context Protocol (MCP) server that provides LLM-friendly APIs for analyzing Linux SOS reports. 
+**SOSALot** is a Model Context Protocol (MCP) server that provides LLM-friendly APIs to retrieve data from Linux SOS reports. 
 
 ### Design Philosophy
 
 SOS report outputs vary between target systems, distros and sos report versions. 
 
-A comprehensive MCP tool-set to pull data from an sos report (e.g., `get_network_interfaces`, `get_hardware_info` etc.) is likely to be very complex and brittle.
+Comprehensive MCP tooling to abstract data from sos reports (e.g., `get_network_interfaces`, `get_hardware_info` etc.) will be complex and brittle.
 
-Instead we lean on the file-based nature of sos reports and dynamically create a map of info domain to useful files.
+So we provide a tool "get_info_sources_for_domain" to help find the right files. Plus tools to read, list, find and search within files.
 
-The mappings are set up entirely in sosalot server's config, then dynamically constrained by what files really exist in a given sos report.
+We maintain JSON config for "get_info_sources_for_domain" which lists common sos file paths (globbing allowed) for each of a set of info domains. When the tool is called with a specified info domain and sos report we return only files of interest to that domain that do exist on the sos report expanding globing if present.
 
-Exceptions will be made when necessary including:
- - sos report discovery tools
- - file find, search and read tools
- - maybe a system journal parser/search tool
+Additionaly we provide a tool to discover sos reports. May be useful to write a tool that provides filetering for journal data.
 
 #### Benefits
  - **Maintainability**: Update configuration files instead of code to amend and extend functionality
@@ -33,26 +30,36 @@ This is a **monorepo** with two independent packages:
 
 ```
 sosalot/
-├── sosalotserver/          # MCP Server Package
-│   ├── sosalot_server.py   # Main MCP server
-│   ├── utils.py            # Utility functions
-│   ├── tools/              # MCP tools implementation
-│   ├── sos_reports/        # Sample SOS report data
-│   └── requirements.txt    # Server dependencies
-├── sosalotclient/          # Client Package  
-│   ├── test_sosalot_client.py     # Comprehensive test suite
-│   ├── mcp_client_basic_func.py   # LLM integration client
-│   └── requirements.txt           # Client dependencies
+├── sosalotserver/                   # MCP Server Package
+│   ├── sosalot_server.py            # Main MCP server
+│   ├── utils.py                     # Utility functions
+│   ├── __init__.py                  # Package initialization
+│   ├── requirements.txt             # Server dependencies
+│   ├── config/
+│   │   └── info_sources.json        # Info domain to file mappings
+│   ├── tools/                       # MCP tools implementation
+│   │   ├── __init__.py
+│   │   ├── filesystem_tools.py      # File operations with pagination
+│   │   ├── info_sources_tool.py     # Dynamic info domain mapping
+│   │   └── report_discovery.py      # SOS report discovery
+│   ├── prompts/                     # LLM prompt templates
+│   ├── resources/                   # Resource definitions
+│   └── sos_reports/                 # Sample SOS report data
+│       └── sosreport-CentOS9-Original-11223344-2025-12-09-lxetseg/
+├── sosalotclient/                   # Client Package  
+│   ├── sosalot_server_functional_tests.py  # Comprehensive test suite
+│   ├── smart_client.py              # LLM integration client
+│   ├── simple_llm_test.py           # Basic LLM test
+│   └── requirements.txt             # Client dependencies
+├── docs/                            # Documentation
+│   ├── dev_notes.md
+│   ├── to_do.md
+│   └── ...
+├── keys/                            # API keys (gitignored)
+├── Example_ code_for_reference/     # Reference implementations
 └── README.md
 ```
 
-## Features
-
-### SOS Report Analysis Tools
-- **Report Discovery**: Find and list available SOS reports
-- **System Information**: Extract hardware, OS, and configuration data
-- **File System Analysis**: Navigate and analyze captured file systems
-- **Performance Data**: Access system metrics and logs
 
 
 ## Quick Start
@@ -60,7 +67,7 @@ sosalot/
 ### Prerequisites
 - Python 3.8+
 
-### Server Setup
+### Server Setup on linux/macOS
 
 ```bash
 # Navigate to server directory
@@ -68,31 +75,23 @@ cd sosalotserver/
 
 # Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate 
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the MCP server
+# Run the MCP server in different modes:
+
+# Option 1: STDIO mode (for direct MCP client integration, useful for running it under claude desktop).)
+python sosalot_server.py -t stdio
+
+# Option 2: Streamable HTTP mode (default)  
+python sosalot_server.py -t strm
+
+# Option 3: Default mode (streamable HTTP)
 python sosalot_server.py
 ```
 
-### Client Setup
-
-```bash
-# Navigate to client directory (in a new terminal)
-cd sosalotclient/
-
-# Create and activate virtual environment  
-python -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run tests to verify setup
-python test_sosalot_client.py
-```
 
 ## 🔧 API Reference
 
