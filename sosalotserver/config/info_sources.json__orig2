@@ -15,7 +15,46 @@
         }
       ]
     },
-
+    "kernel_settings": {
+      "description": "Kernel runtime parameters and boot configuration",
+      "sources": [
+        {
+          "path": "sos_commands/kernel/sysctl_-a",
+          "confidence": "high",
+          "notes": "Complete snapshot of all kernel parameters"
+        },
+        {
+          "path": "proc/cmdline",
+          "confidence": "high",
+          "notes": "Boot-time kernel parameters"
+        },
+        {
+          "path": "sys/kernel/mm/transparent_hugepage/enabled",
+          "confidence": "high",
+          "notes": "Transparent huge pages enablement state"
+        },
+        {
+          "path": "sys/kernel/mm/transparent_hugepage/defrag",
+          "confidence": "medium",
+          "notes": "Transparent huge pages defragmentation policy"
+        },
+        {
+          "glob": "sys/kernel/mm/ksm/*",
+          "confidence": "medium",
+          "notes": "Kernel samepage merging (KSM) configuration and statistics"
+        },
+        {
+          "path": "etc/sysctl.conf",
+          "confidence": "medium",
+          "notes": "Persistent sysctl configuration"
+        },
+        {
+          "glob": "etc/sysctl.d/*.conf",
+          "confidence": "medium",
+          "notes": "Additional persistent sysctl configurations"
+        }
+      ]
+    },
     "cpu_memory": {
       "description": "CPU topology and system memory configuration",
       "sources": [

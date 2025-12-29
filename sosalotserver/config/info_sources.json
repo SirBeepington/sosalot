@@ -15,7 +15,46 @@
         }
       ]
     },
-
+    "kernel_settings": {
+      "description": "Kernel runtime parameters and boot configuration",
+      "sources": [
+        {
+          "path": "sos_commands/kernel/sysctl_-a",
+          "confidence": "high",
+          "notes": "Complete snapshot of all kernel parameters"
+        },
+        {
+          "path": "proc/cmdline",
+          "confidence": "high",
+          "notes": "Boot-time kernel parameters"
+        },
+        {
+          "path": "sys/kernel/mm/transparent_hugepage/enabled",
+          "confidence": "high",
+          "notes": "Transparent huge pages enablement state"
+        },
+        {
+          "path": "sys/kernel/mm/transparent_hugepage/defrag",
+          "confidence": "medium",
+          "notes": "Transparent huge pages defragmentation policy"
+        },
+        {
+          "glob": "sys/kernel/mm/ksm/*",
+          "confidence": "medium",
+          "notes": "Kernel samepage merging (KSM) configuration and statistics"
+        },
+        {
+          "path": "etc/sysctl.conf",
+          "confidence": "medium",
+          "notes": "Persistent sysctl configuration"
+        },
+        {
+          "glob": "etc/sysctl.d/*.conf",
+          "confidence": "medium",
+          "notes": "Additional persistent sysctl configurations"
+        }
+      ]
+    },
     "cpu_memory": {
       "description": "CPU topology and system memory configuration",
       "sources": [
@@ -33,6 +72,102 @@
           "path": "sos_commands/memory/free_-m",
           "confidence": "medium",
           "notes": "Human-readable memory usage snapshot"
+        }
+      ]
+    },
+
+    "package_management": {
+      "description": "Installed packages, repositories, and package transaction history",
+      "sources": [
+        {
+          "path": "installed-rpms",
+          "confidence": "high",
+          "notes": "Complete list of installed RPM packages"
+        },
+        {
+          "path": "sos_commands/dnf/dnf_list_installed",
+          "confidence": "high",
+          "notes": "DNF view of installed packages"
+        },
+        {
+          "path": "sos_commands/dnf/dnf_history",
+          "confidence": "high",
+          "notes": "Recent package installation and update transactions"
+        },
+        {
+          "path": "sos_commands/dnf/dnf_-C_repolist",
+          "confidence": "medium",
+          "notes": "Configured package repositories"
+        }
+      ]
+    },
+    "network_connections": {
+      "description": "Active network connections, listening ports, and socket state",
+      "sources": [
+        {
+          "path": "proc/net/tcp",
+          "confidence": "high",
+          "notes": "Active TCP connections and listening sockets"
+        },
+        {
+          "path": "proc/net/tcp6",
+          "confidence": "high",
+          "notes": "Active IPv6 TCP connections"
+        },
+        {
+          "path": "proc/net/udp",
+          "confidence": "high",
+          "notes": "UDP socket information"
+        },
+        {
+          "path": "proc/net/udp6",
+          "confidence": "high",
+          "notes": "IPv6 UDP socket information"
+        },
+        {
+          "path": "proc/net/unix",
+          "confidence": "medium",
+          "notes": "Unix domain sockets"
+        },
+        {
+          "path": "proc/net/sockstat",
+          "confidence": "medium",
+          "notes": "Socket usage statistics"
+        },
+        {
+          "path": "sos_commands/networking/ss_-s",
+          "confidence": "low",
+          "notes": "Socket statistics summary"
+        }
+      ]
+    },
+    "resource_usage": {
+      "description": "CPU, memory, and I/O resource utilization and performance metrics",
+      "sources": [
+        {
+          "path": "proc/meminfo",
+          "confidence": "high",
+          "notes": "Memory usage snapshot"
+        },
+        {
+          "path": "proc/loadavg",
+          "confidence": "high",
+          "notes": "System load averages"
+        },
+        {
+          "path": "sos_commands/process/ps_auxwwwm",
+          "confidence": "high",
+          "notes": "Process list with resource consumption"
+        },
+        {
+          "path": "proc/stat",
+          "confidence": "medium",
+          "notes": "CPU and system statistics"
+        },
+        {
+          "path": "proc/diskstats",
+          "confidence": "medium",
+          "notes": "Block device I/O statistics"
         }
       ]
     },
