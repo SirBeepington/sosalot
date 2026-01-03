@@ -49,7 +49,7 @@ TASK LIST: Tool self-description cleanup and standardising tool behaviours
       - truncated (boolean), where applicable
       - total_items (count), where applicable
 
-[ ] 5. Rename search_for_files_and_directories
+[x] 5. Rename search_for_files_and_directories
     - Choose a shorter, clearer name:
       - find_paths (recommended - clear and concise)
       - glob_paths (alternative - explicitly mentions globbing)

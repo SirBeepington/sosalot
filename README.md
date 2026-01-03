@@ -2,27 +2,22 @@
 
 **SOSALot** is a Model Context Protocol (MCP) server that provides LLM-friendly APIs to retrieve data from Linux SOS reports. 
 
-### Design Philosophy
+### Design
 
-SOS report outputs vary between target systems, distros and sos report versions. 
+Provide a smart lookup tool to find a specified SOS report's files by specified info domain. 
 
-Comprehensive MCP tooling to abstract data from sos reports (e.g., `get_network_interfaces`, `get_hardware_info` etc.) will be complex and brittle.
+Use separate config to list common sos file paths (globbing allowed) for each of a set of info domains. The lookup tool whne given a domain and specific sos report should return only files of interest to that domain that do exist on the sos report expanding globing if present.
 
-So we provide a tool "get_info_sources_for_domain" to find the right files. Plus tools to read, list, find and search within files.
+Provide fallback file search tools.
 
-We maintain JSON config for "get_info_sources_for_domain" which lists common sos file paths (globbing allowed) for each of a set of info domains. When the tool is called with a specified info domain and sos report we return only files of interest to that domain that do exist on the sos report expanding globing if present.
-
-Additionaly we provide a tool to discover sos reports. May be useful to write a tool that provides filtering for journal data.
+This is as an alt4ernative to providing comprehensive tooling to abstract data from SOS reports which due to differences between report and OS versions are likely to be brittle and costly to maintain.
 
 #### Benefits
- - **Maintainability**: Update configuration files instead of code to amend and extend functionality
+ - **Maintainability**: Update config to maintain and extend functionality
  - **Reliability**: Generic file operations are immune to SOS report version variations
- - **Flexibility**: All the data in any given sos report can be made available
 
 #### Drawbacks
- - **File names and directory structure**: Very linux-like, demands good linux knowledge from client
- - **No data abstraction**: Difficulty diffing sos reports that don't have matching files 
-
+ - **Domain knowledge**: Demands linux knowledge from client to interpret file contents, often linux command outputs.
 
 
 ## Quick Start
@@ -42,10 +37,11 @@ source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+```
+### MCP server modes
 
-# Run the MCP server in different modes:
-
-# Option 1: STDIO mode (for direct MCP client integration, useful for running it under claude desktop).)
+```bash
+# Option 1: STDIO mode (for direct MCP client integration).
 python sosalot_server.py -t stdio
 
 # Option 2: Streamable HTTP mode (default)  
@@ -54,3 +50,30 @@ python sosalot_server.py -t strm
 # Option 3: Default mode (streamable HTTP)
 python sosalot_server.py
 ```
+### Set up under Claude Desktop
+
+Run the server in STDIO mode
+
+See https://modelcontextprotocol.io/docs/develop/connect-local-servers
+
+Example claude_desktop_config.json
+
+```JSON
+{
+  "preferences": {
+    "quickEntryShortcut": "off",
+    "menuBarEnabled": true
+  },
+  "mcpServers": {
+    "sosalot": {
+      "command": "/Users/gandalf/Documents/MCP-SERVERS/sosalotserver/venv/bin/python",
+      "args": [
+        "/Users/gandalf/Documents/MCP-SERVERS/sosalotserver/sosalot_server.py",
+        "-t",
+        "stdio"
+      ]
+    }
+  }
+}
+```
+

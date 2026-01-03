@@ -1,0 +1,8 @@
+# Decoupling tool definition text from code
+
+- MCP servers advertise tools, their capabilities and usage in tool definitions, which are requested by and then sent to the MCP client
+- By default, the docstring for each tool is sent as the tool definition
+- This is a PITA when it comes to tweaking/testing the definitions, hard to version, rollback, A/B test
+- So I want to keep the definitions in a separate JSON manifest file 'tool_definitions.json'
+
+
