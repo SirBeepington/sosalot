@@ -34,6 +34,49 @@ import json
 
 from mcp.server.fastmcp import FastMCP
 
+# Parse args early to configure paths before importing tools
+import argparse
+import sys
+
+# Get script directory for default paths
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Parse args whether running directly or being imported
+parser = argparse.ArgumentParser(
+    description="SosAlot - SOS Report Analysis MCP Server",
+    formatter_class=argparse.RawDescriptionHelpFormatter
+)
+parser.add_argument(
+    "-t", "--transport", 
+    choices=["strm", "stdio"],
+    default="strm",
+    help="Transport method: 'strm' for streamable HTTP (default), 'stdio' for stdio transport"
+)
+parser.add_argument(
+    "--reports-dir",
+    default=os.path.join(SCRIPT_DIR, "sos_reports"),
+    help="Directory containing SOS report directories (default: ./sos_reports relative to script). "
+         "This should point to a parent directory that contains one or more SOS report root directories, "
+         "not to an individual SOS report directory itself. "
+         "Requires write access and symlink support (not CIFS/SMB shares). "
+         "Server will work without write access but will use full directory names."
+)
+
+# Parse args (will use defaults if no CLI args provided, e.g. when imported)
+args, unknown = parser.parse_known_args()
+
+# Configure SOS reports directory BEFORE importing tools
+import utils
+utils.SOS_REPORTS_DIR = os.path.abspath(args.reports_dir)
+print(f"[INFO] Using SOS reports directory: {utils.SOS_REPORTS_DIR}")
+
+# Check write access and symlink support
+if not os.path.exists(utils.SOS_REPORTS_DIR):
+    print(f"[WARN] Reports directory does not exist: {utils.SOS_REPORTS_DIR}")
+elif not os.access(utils.SOS_REPORTS_DIR, os.W_OK):
+    print(f"[WARN] No write access to reports directory. Symlink creation will fail.")
+    print(f"       Server will still work but report IDs will use full directory names.")
+
 # Import all utilities from utils module
 from utils import *
 
@@ -204,40 +247,7 @@ Example report_id: "centos9-original_20251209_1430"
 
 # Run with configurable transport
 if __name__ == "__main__":
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(
-        description="SosAlot - SOS Report Analysis MCP Server",
-        formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-    parser.add_argument(
-        "-t", "--transport", 
-        choices=["strm", "stdio"],
-        default="strm",
-        help="Transport method: 'strm' for streamable HTTP (default), 'stdio' for stdio transport"
-    )
-    parser.add_argument(
-        "--reports-dir",
-        default="./sos_reports",
-        help="Directory containing SOS report directories (default: ./sos_reports). "
-             "This should point to a parent directory that contains one or more SOS report root directories, "
-             "not to an individual SOS report directory itself. "
-             "Requires write access and symlink support (not CIFS/SMB shares). "
-             "Server will work without write access but will use full directory names."
-    )
-    
-    args = parser.parse_args()
-    
-    # Configure SOS reports directory before importing tools
-    import utils
-    utils.SOS_REPORTS_DIR = os.path.abspath(args.reports_dir)
-    print(f"[INFO] Using SOS reports directory: {utils.SOS_REPORTS_DIR}")
-    
-    # Check write access and symlink support
-    if not os.path.exists(utils.SOS_REPORTS_DIR):
-        print(f"[WARN] Reports directory does not exist: {utils.SOS_REPORTS_DIR}")
-    elif not os.access(utils.SOS_REPORTS_DIR, os.W_OK):
-        print(f"[WARN] No write access to reports directory. Symlink creation will fail.")
-        print(f"       Server will still work but report IDs will use full directory names.")
+    # args were already parsed at module load time
     
     # Map transport argument to actual transport string
     transport_map = {

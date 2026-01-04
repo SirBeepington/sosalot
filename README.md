@@ -10,7 +10,9 @@ Use separate config to list common sos file paths (globbing allowed) for each of
 
 Provide fallback file search tools.
 
-This is as an alt4ernative to providing comprehensive tooling to abstract data from SOS reports which due to differences between report and OS versions are likely to be brittle and costly to maintain.
+This is as an alternative to providing comprehensive tooling to abstract data from SOS reports which due to differences between report and OS versions are likely to be brittle and costly to maintain.
+
+Also, keep tool definitions in a separate config file, instead of docstrings for easier versioning/testing.
 
 #### Benefits
  - **Maintainability**: Update config to maintain and extend functionality
