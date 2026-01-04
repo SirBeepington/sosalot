@@ -28,9 +28,6 @@ This is as an alt4ernative to providing comprehensive tooling to abstract data f
 ### Server Setup on linux/macOS
 
 ```bash
-# Navigate to server directory
-cd sosalotserver/
-
 # Create and activate virtual environment
 python -m venv venv
 source venv/bin/activate 
@@ -66,9 +63,9 @@ Example claude_desktop_config.json
   },
   "mcpServers": {
     "sosalot": {
-      "command": "/Users/gandalf/Documents/MCP-SERVERS/sosalotserver/venv/bin/python",
+      "command": "/Users/gandalf/Documents/MCP-SERVERS/sosalot/venv/bin/python",
       "args": [
-        "/Users/gandalf/Documents/MCP-SERVERS/sosalotserver/sosalot_server.py",
+        "/Users/gandalf/Documents/MCP-SERVERS/sosalot/sosalot_server.py",
         "-t",
         "stdio"
       ]

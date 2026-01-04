@@ -431,7 +431,11 @@ def generate_report_id(report_path: str) -> str:
 
 
 def ensure_report_symlink(report_path: str) -> str:
-    """Create symlink with simplified name, return the simplified ID."""
+    """Create symlink with simplified name, return the simplified ID.
+    
+    Falls back to original directory name if symlink creation fails
+    (e.g., no write permissions or filesystem doesn't support symlinks like CIFS).
+    """
     simplified_id = generate_report_id(report_path)
     symlink_path = os.path.join(SOS_REPORTS_DIR, simplified_id)
     
@@ -441,10 +445,12 @@ def ensure_report_symlink(report_path: str) -> str:
             # Get the directory name (not full path) for relative symlink
             target_dir = os.path.basename(report_path)
             os.symlink(target_dir, symlink_path)
-        except OSError:
+        except OSError as e:
             # If symlink creation fails, just return the original directory name
-            # This provides graceful fallback
-            pass
+            # This provides graceful fallback for read-only or unsupported filesystems
+            print(f"[WARN] Could not create symlink for {simplified_id}: {e}")
+            print(f"       Using full directory name instead. Check filesystem type and permissions.")
+            return os.path.basename(report_path)
     
     return simplified_id
 

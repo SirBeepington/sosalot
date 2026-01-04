@@ -5,14 +5,24 @@ SosAlot - SOS Report Analysis MCP Server
 A Model Context Protocol server for analyzing Linux SOS reports.
 
 Usage:
-    python sosalot_server.py [-t strm|stdio] [--transport strm|stdio]
+    python sosalot_server.py [-t strm|stdio] [--transport strm|stdio] [--reports-dir PATH]
     
 Transport options:
     strm    - Use streamable HTTP (default)
     stdio   - Use stdio transport
+
+Reports directory:
+    --reports-dir PATH   - Directory containing SOS report directories (default: ./sos_reports)
+    
+Requirements:
+    - Write access to reports directory (for creating simplified symlinks)
+    - Filesystem must support symlinks (not CIFS/SMB shares)
+    - Server will work without write access but will use full report directory names
 """
 
 import argparse
+import os
+import json
 
 # TODO: Future Tools to Add
 
@@ -32,6 +42,37 @@ sosalot = FastMCP("SosAlot", json_response=True)
 
 
 # =============================================================================
+# LOAD TOOL DEFINITIONS FROM CONFIG
+# =============================================================================
+
+# Load optional tool definition overrides from JSON
+TOOL_DEFS = {}
+config_path = os.path.join(os.path.dirname(__file__), 'config', 'tool_definitions.json')
+try:
+    with open(config_path) as f:
+        TOOL_DEFS = json.load(f).get('tools', {})
+    print(f"[INFO] Loaded tool definitions from {config_path}")
+except FileNotFoundError:
+    print(f"[WARN] tool_definitions.json not found at {config_path}, using docstrings")
+except json.JSONDecodeError as e:
+    print(f"[WARN] Invalid JSON in tool_definitions.json: {e}")
+
+
+def register_tool(func):
+    """Register a tool with MCP, using JSON definition if available, otherwise use docstring."""
+    tool_name = func.__name__
+    
+    # Override docstring if definition exists in JSON
+    if tool_name in TOOL_DEFS and 'description' in TOOL_DEFS[tool_name]:
+        func.__doc__ = TOOL_DEFS[tool_name]['description']
+        print(f"  {tool_name}: using JSON definition")
+    else:
+        print(f"  {tool_name}: using docstring")
+    
+    sosalot.tool()(func)
+
+
+# =============================================================================
 # IMPORT AND REGISTER TOOLS FROM MODULES
 # =============================================================================
 
@@ -41,13 +82,15 @@ from tools.filesystem_tools import list_dir, find_files_by_name, find_files_by_n
 from tools.info_sources_tool import get_info_sources_for_domain
 
 # Register all tools with the MCP server
-sosalot.tool()(query_sos_reports)
-sosalot.tool()(list_dir)
-sosalot.tool()(find_files_by_name)
-sosalot.tool()(find_files_by_name_recursive)
-sosalot.tool()(read_file)
-sosalot.tool()(search_file)
-sosalot.tool()(get_info_sources_for_domain)
+print("\nRegistering tools:")
+register_tool(query_sos_reports)
+register_tool(list_dir)
+register_tool(find_files_by_name)
+register_tool(find_files_by_name_recursive)
+register_tool(read_file)
+register_tool(search_file)
+register_tool(get_info_sources_for_domain)
+print("")
 
 
 # =============================================================================
@@ -172,8 +215,29 @@ if __name__ == "__main__":
         default="strm",
         help="Transport method: 'strm' for streamable HTTP (default), 'stdio' for stdio transport"
     )
+    parser.add_argument(
+        "--reports-dir",
+        default="./sos_reports",
+        help="Directory containing SOS report directories (default: ./sos_reports). "
+             "This should point to a parent directory that contains one or more SOS report root directories, "
+             "not to an individual SOS report directory itself. "
+             "Requires write access and symlink support (not CIFS/SMB shares). "
+             "Server will work without write access but will use full directory names."
+    )
     
     args = parser.parse_args()
+    
+    # Configure SOS reports directory before importing tools
+    import utils
+    utils.SOS_REPORTS_DIR = os.path.abspath(args.reports_dir)
+    print(f"[INFO] Using SOS reports directory: {utils.SOS_REPORTS_DIR}")
+    
+    # Check write access and symlink support
+    if not os.path.exists(utils.SOS_REPORTS_DIR):
+        print(f"[WARN] Reports directory does not exist: {utils.SOS_REPORTS_DIR}")
+    elif not os.access(utils.SOS_REPORTS_DIR, os.W_OK):
+        print(f"[WARN] No write access to reports directory. Symlink creation will fail.")
+        print(f"       Server will still work but report IDs will use full directory names.")
     
     # Map transport argument to actual transport string
     transport_map = {
@@ -182,11 +246,11 @@ if __name__ == "__main__":
     }
     
     transport = transport_map[args.transport]
-    print(f"🚀 Starting SosAlot MCP server with '{transport}' transport")
+    print(f"[INFO] Starting SosAlot MCP server with '{transport}' transport")
     
     if transport == "stdio":
-        print("📡 Server will communicate via stdin/stdout (no HTTP server)")
+        print("[INFO] Server will communicate via stdin/stdout (no HTTP server)")
     else:
-        print("🌐 Server will start HTTP server on http://127.0.0.1:8000")
+        print("[INFO] Server will start HTTP server on http://127.0.0.1:8000")
     
     sosalot.run(transport=transport)
