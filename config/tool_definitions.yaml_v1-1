@@ -1,0 +1,181 @@
+tools:
+  query_sos_reports:
+    description: |
+      Query and list available SOS reports with their metadata.
+
+      Use this tool FIRST to find available SOS reports. Each report has a report_id that you'll use with other tools. SOS reports contain Linux system diagnostic data.
+
+      Args:
+          hostname: Filter by hostname (partial match, case-insensitive)
+          serial_number: Filter by hardware serial number (exact match)
+          date_contains: Filter by creation date (partial match)
+
+      Returns:
+          Dictionary with 'reports' list containing report metadata including:
+          - report_id: Simplified ID for use with other tools (e.g., "centos9-original_20251209_1430")
+          - report_name: Original directory name 
+          - hostname: Extracted hostname from the report
+          - serial_number: Hardware serial number
+          - creation_date: When the report was created
+          
+      Example: First call query_sos_reports() to get report_id, then use that with other tools like read_file(report="centos9-original_20251209_1430", path="etc/hostname")
+
+  list_dir:
+    description: |
+      List contents of a directory within a SOS report with pagination.
+
+      Args:
+          report: Report ID from query_sos_reports (e.g., "centos9-original_20251209_1430")
+          path: Path within the report (e.g., "etc", "var/log", "proc"). Use empty string for root.
+          offset: Skip this many matching items (default: 0)
+          limit: Return at most this many items (default: 50)
+          max_search: Stop searching after finding this many total matches (default: 500)
+          
+      Returns:
+          Dictionary with:
+          - 'items': List of directory contents with type info  
+          - 'total_items': Total number of items found
+          - 'pagination': Pagination information
+          
+      Note: Directories end with '/' in the name field.
+
+      Common useful paths:
+      - "etc" - Configuration files (hostname, os-release, etc.)
+      - "var/log" - Log files
+      - "sos_commands" - Command outputs organized by category
+      - "proc" - Process and system information
+
+  find_files_by_name:
+    description: |
+      Find files by name pattern within a single directory (non-recursive).
+
+      Searches ONLY in the specified directory, NOT in subdirectories.
+      Pattern matching is CASE-INSENSITIVE and matches against FILENAME only (not full path).
+      Supports pagination for large directories.
+
+      Args:
+          report: Report ID from query_sos_reports (e.g., "centos9-original_20251209_1430")
+          pattern: Glob pattern to match filenames (e.g., "*swap*", "*.log", "*hostname*", "ip_*")
+          search_path: Path within report to search (default: search report root directory)
+          offset: Skip this many matching items (for pagination, default 0)
+          limit: Return at most this many items (default 50, max 100)
+          max_search: Stop searching after finding this many total matches (default 500, max 2000)
+          
+      Returns:
+          Dictionary with search results and pagination info
+          
+      Search Behavior:
+      - NON-RECURSIVE: Searches only the specified directory
+      - CASE-INSENSITIVE: "Swap" matches "swap", "SWAP", "SwAp"
+      - FILENAME ONLY: Pattern matches against filename, not full path
+      - PAGINATED: Use offset/limit to browse large directories
+
+      Common patterns:
+      - "*swap*" - Find files containing "swap" in filename (case-insensitive)
+      - "*hostname*" - Find hostname-related files
+      - "*.conf" - Find configuration files  
+      - "ip_*" - Find files starting with "ip_"
+
+      Examples:
+      - find_files_by_name("report1", "*.conf", "etc", limit=20) 
+        → First 20 .conf files in etc/ directory only
+      - find_files_by_name("report1", "*SWAP*", "sos_commands/memory")
+        → Find swapon, swapoff files in memory directory only
+
+      Security: Globstar (**) patterns are not allowed.
+
+  find_files_by_name_recursive:
+    description: |
+      Find files by name pattern recursively through all subdirectories.
+
+      Searches RECURSIVELY through all subdirectories from the search_path.
+      Pattern matching is CASE-INSENSITIVE and matches against FILENAME only (not full path).
+      Supports pagination for large result sets.
+
+      Args:
+          report: Report ID from query_sos_reports (e.g., "centos9-original_20251209_1430")
+          pattern: Glob pattern to match filenames (e.g., "*swap*", "*.log", "*hostname*", "ip_*")
+          search_path: Path within report to start search (default: search entire report recursively)
+          offset: Skip this many matching items (for pagination, default 0)
+          limit: Return at most this many items (default 50, max 100)
+          max_search: Stop searching after finding this many total matches (default 500, max 2000)
+          
+      Returns:
+          Dictionary with search results and pagination info
+          
+      Search Behavior:
+      - RECURSIVE: Searches all subdirectories under search_path
+      - CASE-INSENSITIVE: "Swap" matches "swap", "SWAP", "SwAp"
+      - FILENAME ONLY: Pattern matches against filename, not full path
+      - PAGINATED: Use offset/limit to browse large result sets
+
+      Common patterns:
+      - "*swap*" - Find files containing "swap" in filename (case-insensitive)
+      - "*hostname*" - Find hostname-related files  
+      - "*.conf" - Find configuration files everywhere
+      - "ip_*" - Find files starting with "ip_"
+      - "*log*" - Find files containing "log" in filename
+
+      Examples:
+      - find_files_by_name_recursive("report1", "*swap*", "sos_commands") 
+        → Finds sos_commands/memory/swapon_--summary_--verbose recursively
+      - find_files_by_name_recursive("report1", "*.conf", "etc", offset=0, limit=20)
+        → First 20 .conf files under etc/ and all subdirectories
+
+      Security: Globstar (**) patterns are not allowed.
+
+  read_file:
+    description: |
+      Read the contents of a file from a SOS report with pagination.
+
+      Args:
+          report: Report ID from query_sos_reports (e.g., "centos9-original_20251209_1430")
+          path: Path to file within report (e.g., "etc/hostname", "var/log/messages")
+          offset: Character offset to start reading (use 0 for beginning)
+          limit: Maximum characters to return
+
+      Returns:
+          Dictionary with file content and pagination info
+          
+      Common useful files:
+      - "etc/hostname" - System hostname
+      - "etc/os-release" - OS version info
+      - "sos_commands/networking/ip_addr" - IP addresses
+      - "sos_commands/networking/ip_route" - Routing table
+      - "sos_commands/hardware/dmidecode" - Hardware info
+      - "var/log/messages" - System log messages
+
+  search_file:
+    description: |
+      Search for text within a specific file from a SOS report with character-based output limiting.
+
+      Args:
+          report: Report ID from query_sos_reports (e.g., "centos9-original_20251209_1430")
+          path: Path to file within report (e.g., "sos_commands/networking/ip_addr")
+          substring: Text to search for (case-insensitive)
+          lines_before: Context lines before each match (default: 0)
+          lines_after: Context lines after each match (default: 0)
+          offset: Character position to start output from (default: 0)
+          limit: Maximum characters to return (default: 10000)
+          max_matches: Maximum matches to return (default 50, max 200)
+
+      Returns:
+          Dictionary with search results and character-based pagination info
+          
+      Tips:
+      - Search for "inet " in networking files to find IP addresses
+      - Search for "ERROR" or "error" in log files
+      - Search for "=" in config files to find settings
+
+  get_info_sources_for_domain:
+    description: |
+      Get information source guidance for a specific domain in a SOS report.
+
+      This tool provides guidance on where to find specific types of information within SOS reports, returning only files that actually exist in the specified report.
+
+      Args:
+          domain: Information domain (e.g., "networking", "storage", "memory", "hardware")
+          report: SOS report ID to search within (e.g., "centos9-original_20251209_2142"). Use query_sos_reports() tool first to get available report IDs.
+
+      Returns:
+          JSON string with structured guidance showing actual existing files for the specified domain in the given report. Only returns files that exist - no placeholders or missing file indicators.

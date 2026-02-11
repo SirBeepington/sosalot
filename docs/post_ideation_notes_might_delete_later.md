@@ -72,6 +72,11 @@ class SOSALotServer:
 
 **The Idea**: MCP server contains diagnostic "recipes" for common system problems. When user says "networking is slow", LLM gets structured investigation workflow.
 
+**put instructive text in the resource, not the tool definitions**: 
+  Currently I may have some instructuve text in the tool definitions (eg 'run this tool first'. THIS IS WRONG
+  Tool definitions should be purely descriptive
+  If I wanted to have instructive info, then put it in recipies maybe.
+
 Eg..
 
 ```

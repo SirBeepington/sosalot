@@ -5,7 +5,7 @@ SosAlot - SOS Report Analysis MCP Server
 A Model Context Protocol server for analyzing Linux SOS reports.
 
 Usage:
-    python sosalot_server.py [-t strm|stdio] [--transport strm|stdio] [--reports-dir PATH]
+    python sosalot_server.py [-t strm|stdio] [--transport strm|stdio] [--reports-dir PATH] [--refresh-cache]
     
 Transport options:
     strm    - Use streamable HTTP (default)
@@ -15,9 +15,8 @@ Reports directory:
     --reports-dir PATH   - Directory containing SOS report directories (default: ./sos_reports)
     
 Requirements:
-    - Write access to reports directory (for creating simplified symlinks)
-    - Filesystem must support symlinks (not CIFS/SMB shares)
-    - Server will work without write access but will use full report directory names
+    - Write access to reports directory (for report metadata cache, optional)
+    - Server will work without write access but will skip cache writes
 """
 
 import argparse
@@ -58,8 +57,12 @@ parser.add_argument(
     help="Directory containing SOS report directories (default: ./sos_reports relative to script). "
          "This should point to a parent directory that contains one or more SOS report root directories, "
          "not to an individual SOS report directory itself. "
-         "Requires write access and symlink support (not CIFS/SMB shares). "
-         "Server will work without write access but will use full directory names."
+         "Write access enables a report metadata cache; without it, cache writes are skipped."
+)
+parser.add_argument(
+    "--refresh-cache",
+    action="store_true",
+    help="Delete and rebuild the report metadata cache on startup"
 )
 
 # Parse args (will use defaults if no CLI args provided, e.g. when imported)
@@ -68,14 +71,16 @@ args, unknown = parser.parse_known_args()
 # Configure SOS reports directory BEFORE importing tools
 import utils
 utils.SOS_REPORTS_DIR = os.path.abspath(args.reports_dir)
+utils.REFRESH_REPORT_CACHE = args.refresh_cache
 print(f"[INFO] Using SOS reports directory: {utils.SOS_REPORTS_DIR}")
+if utils.REFRESH_REPORT_CACHE:
+    print("[INFO] Refreshing report metadata cache")
 
-# Check write access and symlink support
+# Check write access for cache persistence
 if not os.path.exists(utils.SOS_REPORTS_DIR):
     print(f"[WARN] Reports directory does not exist: {utils.SOS_REPORTS_DIR}")
 elif not os.access(utils.SOS_REPORTS_DIR, os.W_OK):
-    print(f"[WARN] No write access to reports directory. Symlink creation will fail.")
-    print(f"       Server will still work but report IDs will use full directory names.")
+    print(f"[WARN] No write access to reports directory. Cache file will not be written.")
 
 # Import all utilities from utils module
 from utils import *
@@ -88,15 +93,28 @@ sosalot = FastMCP("SosAlot", json_response=True)
 # LOAD TOOL DEFINITIONS FROM CONFIG
 # =============================================================================
 
-# Load optional tool definition overrides from JSON
+# Load optional tool definition overrides from YAML or JSON
 TOOL_DEFS = {}
-config_path = os.path.join(os.path.dirname(__file__), 'config', 'tool_definitions.json')
+config_dir = os.path.join(os.path.dirname(__file__), 'config')
+
+# Try YAML first, fall back to JSON
+yaml_path = os.path.join(config_dir, 'tool_definitions.yaml')
+json_path = os.path.join(config_dir, 'tool_definitions.json')
+
 try:
-    with open(config_path) as f:
-        TOOL_DEFS = json.load(f).get('tools', {})
-    print(f"[INFO] Loaded tool definitions from {config_path}")
-except FileNotFoundError:
-    print(f"[WARN] tool_definitions.json not found at {config_path}, using docstrings")
+    if os.path.exists(yaml_path):
+        import yaml
+        with open(yaml_path) as f:
+            TOOL_DEFS = yaml.safe_load(f).get('tools', {})
+        print(f"[INFO] Loaded tool definitions from {yaml_path}")
+    elif os.path.exists(json_path):
+        with open(json_path) as f:
+            TOOL_DEFS = json.load(f).get('tools', {})
+        print(f"[INFO] Loaded tool definitions from {json_path}")
+    else:
+        print(f"[WARN] No tool definitions config found, using docstrings")
+except yaml.YAMLError as e:
+    print(f"[WARN] Invalid YAML in tool_definitions.yaml: {e}")
 except json.JSONDecodeError as e:
     print(f"[WARN] Invalid JSON in tool_definitions.json: {e}")
 

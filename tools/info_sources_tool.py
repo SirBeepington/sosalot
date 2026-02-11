@@ -9,7 +9,7 @@ import os
 import json
 import glob
 from typing import Dict, List, Any, Optional
-from utils import SOS_REPORTS_DIR
+from utils import SOS_REPORTS_DIR, resolve_report_dir
 
 
 def load_info_sources_config() -> Dict[str, Any]:
@@ -36,7 +36,8 @@ def check_source_exists(report: str, source_def: Dict[str, Any]) -> Optional[Dic
     Returns:
         Source info dict if exists, None if not found
     """
-    report_path = os.path.join(SOS_REPORTS_DIR, report)
+    report_dir = resolve_report_dir(report)
+    report_path = os.path.join(SOS_REPORTS_DIR, report_dir) if report_dir else os.path.join(SOS_REPORTS_DIR, report)
     
     if not os.path.exists(report_path):
         raise ValueError(f"Report not found: {report}")

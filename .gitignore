@@ -68,3 +68,10 @@ logs/
 # SOS Reports - exclude entire sosreport directories
 sosreport-*/
 **/sosreport-*/
+
+# SOS Reports cache files (auto-generated)
+.sos_reports_cache.json
+**/.sos_reports_cache.json
+
+# Temporary files
+tmptest/

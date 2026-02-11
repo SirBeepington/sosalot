@@ -13,6 +13,8 @@ from typing import Dict, List, Optional, Any
 # Configuration - Use absolute path based on script location
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SOS_REPORTS_DIR = os.path.join(SCRIPT_DIR, "sos_reports")
+REPORT_CACHE_FILENAME = ".sos_reports_cache.json"
+REFRESH_REPORT_CACHE = False
 
 # Data size limits for LLM efficiency
 MAX_TEXT_SIZE = 10000      # Max characters for text content (logs, files)
@@ -455,14 +457,79 @@ def ensure_report_symlink(report_path: str) -> str:
     return simplified_id
 
 
+def _load_report_cache_file() -> Dict[str, Any]:
+    """Load report cache file (best-effort)."""
+    cache_path = os.path.join(SOS_REPORTS_DIR, REPORT_CACHE_FILENAME)
+    if not os.path.exists(cache_path):
+        return {"reports": {}}
+    try:
+        with open(cache_path) as f:
+            data = json.load(f)
+        if isinstance(data, dict) and "reports" in data:
+            return data
+    except (OSError, json.JSONDecodeError):
+        pass
+    return {"reports": {}}
+
+
+def _save_report_cache_file(cache_data: Dict[str, Any]) -> None:
+    """Save report cache file (best-effort)."""
+    cache_path = os.path.join(SOS_REPORTS_DIR, REPORT_CACHE_FILENAME)
+    try:
+        with open(cache_path, "w") as f:
+            json.dump(cache_data, f, indent=2)
+    except OSError:
+        pass
+
+
+def resolve_report_dir(report_id: str) -> Optional[str]:
+    """Resolve simplified report ID to actual report directory name."""
+    # Direct match (in case report_id is a raw directory name)
+    direct_path = os.path.join(SOS_REPORTS_DIR, report_id)
+    if os.path.isdir(direct_path):
+        return report_id
+
+    # Cache lookup
+    cache_data = _load_report_cache_file()
+    cached_reports = cache_data.get("reports", {})
+    for dir_name, entry in cached_reports.items():
+        report_info = entry.get("report", {})
+        if report_info.get("report_id") == report_id:
+            if os.path.isdir(os.path.join(SOS_REPORTS_DIR, dir_name)):
+                return dir_name
+
+    # Fallback: scan directories and rebuild cache entry for this report
+    try:
+        for item in os.listdir(SOS_REPORTS_DIR):
+            item_path = os.path.join(SOS_REPORTS_DIR, item)
+            if not os.path.isdir(item_path) or os.path.islink(item_path):
+                continue
+
+            if generate_report_id(item_path) == report_id:
+                cache_data.setdefault("reports", {})[item] = {
+                    "mtime": os.path.getmtime(item_path),
+                    "report": {
+                        "report_id": report_id,
+                        "hostname": extract_hostname(item_path),
+                        "serial_number": extract_serial_number(item_path),
+                        "uuid": extract_uuid(item_path),
+                        "creation_date": extract_creation_date(item_path)
+                    }
+                }
+                _save_report_cache_file(cache_data)
+                return item
+    except OSError:
+        pass
+
+    return None
+
+
 def resolve_report_path(report_id: str, internal_path: str = "") -> str:
     """Resolve simplified report ID to full internal path."""
+    report_dir = resolve_report_dir(report_id) or report_id
     if internal_path:
-        full_path = os.path.join(SOS_REPORTS_DIR, report_id, internal_path)
-    else:
-        full_path = os.path.join(SOS_REPORTS_DIR, report_id)
-    
-    return full_path
+        return os.path.join(SOS_REPORTS_DIR, report_dir, internal_path)
+    return os.path.join(SOS_REPORTS_DIR, report_dir)
 
 
 def validate_report_path_security(report_id: str, internal_path: str = "") -> Dict[str, Any]:

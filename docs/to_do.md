@@ -1,8 +1,24 @@
 TASK LIST: Tool self-description cleanup and standardising tool behaviours
 
-[ ] 1. Separate tool contracts from client guidance
+[x] 1. Externalize tool definitions to JSON config file
+    - Move tool docstrings from code to config/tool_definitions.json
+    - Implement runtime docstring override mechanism
+    - Enable easier iteration on tool descriptions without code changes
+    - Maintain fallback to docstrings if JSON not found
+
+[x] 2. Rename search_for_files_and_directories
+    - Choose a shorter, clearer name:
+      - find_paths (recommended - clear and concise)
+      - glob_paths (alternative - explicitly mentions globbing)
+      - search_paths (alternative - but still long)
+    - Update:
+      - tool name
+      - docstring
+      - any references in sos://tool-guide
+
+[ ] 3. Separate tool contracts from client guidance
     - Remove workflow advice and design rationale from all tool docstrings
-      - Delete phrases like “Use this tool FIRST…”
+      - Delete phrases like "Use this tool FIRST…"
       - Remove cross-tool usage examples
       - Remove explanations of *why* behaviours exist
     - Keep tool docstrings limited to:
@@ -12,7 +28,7 @@ TASK LIST: Tool self-description cleanup and standardising tool behaviours
       - behavioural guarantees and constraints
     ..we'll add the removed guidance to the new tool-guide resource, see below.
 
-[ ] 2. Clarify and separate resource responsibilities
+[ ] 4. Clarify and separate resource responsibilities
     - Keep sos://report-layout focused on:
       - sosreport directory structure
       - file layout and conventions
@@ -24,7 +40,7 @@ TASK LIST: Tool self-description cleanup and standardising tool behaviours
       - rationale for differing tool behaviours (e.g. pagination)
     - Ensure there is no overlap between the two resources
 
-[ ] 3. Define and document pagination behaviour per tool (contracts only)
+[ ] 5. Define and document pagination behaviour per tool (contracts only)
     - read_file:
       - State that pagination is stream-style (offset/limit)
       - Document returned fields:
@@ -38,8 +54,8 @@ TASK LIST: Tool self-description cleanup and standardising tool behaviours
     - search tools:
       - Explicitly state that results are truncated and not pageable
 
-[ ] 4. Make return schemas explicit everywhere
-    - Replace vague phrases like “Dictionary with search results”
+[ ] 6. Make return schemas explicit everywhere
+    - Replace vague phrases like "Dictionary with search results"
     - For every tool, list returned fields by name
     - Standardize list field naming:
       - Use `items` for all list results (not `matches`, `reports`, etc.)
@@ -49,17 +65,7 @@ TASK LIST: Tool self-description cleanup and standardising tool behaviours
       - truncated (boolean), where applicable
       - total_items (count), where applicable
 
-[x] 5. Rename search_for_files_and_directories
-    - Choose a shorter, clearer name:
-      - find_paths (recommended - clear and concise)
-      - glob_paths (alternative - explicitly mentions globbing)
-      - search_paths (alternative - but still long)
-    - Update:
-      - tool name
-      - docstring
-      - any references in sos://tool-guide
-
-[ ] 6. Clarify text handling assumptions (contract-level)
+[ ] 7. Clarify text handling assumptions (contract-level)
     - In read_file documentation, specify:
       - encoding (UTF-8)
       - behaviour on decode errors (replace / ignore)
@@ -67,19 +73,19 @@ TASK LIST: Tool self-description cleanup and standardising tool behaviours
       - binary file handling (error/skip behavior)
       - large file limits (if any)
 
-[ ] 7. Terminology consistency pass
+[ ] 8. Terminology consistency pass
     - Pick one and standardise everywhere:
-      - “SOS report” vs “sosreport”
+      - "SOS report" vs "sosreport"
       - report vs report_id
     - Apply consistently across:
       - tools
       - resources
       - examples
 
-[ ] 8. Final LLM sanity pass
+[ ] 9. Final LLM sanity pass
     - Read all tool contracts consecutively
     - Check:
       - no workflow advice in contracts
       - no rationale leaking into tool descriptions
       - no implied ordering between tools
-    - Ask: “Could a dumb but obedient LLM use this correctly?”
+    - Ask: "Could a dumb but obedient LLM use this correctly?"
